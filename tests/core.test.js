@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import {md5,drillPacket,handshakeReply,containsDone,DONE} from '../js/protocol.js';
 import {newDrill,validateDrill,backup,readBackup} from '../js/model.js';
 import {Robot} from '../js/robot.js';
+import {roundBatches} from '../js/sequence.js';
 test('pairing digest follows RFC1321 for ASCII and UTF8 at padding boundaries',()=>{
   for(const text of ['', 'abc', 'árvíztűrő tükörfúrógép',...Array.from({length:130},(_,i)=>'x'.repeat(i))])assert.equal(md5(text),createHash('md5').update(text).digest('hex'));
 });
@@ -39,4 +40,44 @@ test('STOP cancels queued feeding packets, follows in-flight operation, and does
   const feed=r.write(new Uint8Array([129]));const stop=r.stop();release();await Promise.all([first,feed,stop]);
   assert.deepEqual(sent,[[9],[128,1,0,1]]);
   r.writer={writeValue:async()=>{throw new Error('test transport failure');}};await assert.rejects(r.stop(),/transport failure/);
+});
+test('old backups migrate with random modes off; new options survive export/import',()=>{
+  const d=newDrill();delete d.random;
+  const migrated=readBackup(JSON.stringify({format:'pongbot-hu',version:1,drills:[d]}))[0];
+  assert.deepEqual(migrated.random,{type:false,direction:false,spin:1,min:-4,max:4});
+  migrated.random={type:true,direction:true,spin:2,min:-10,max:10};
+  assert.deepEqual(readBackup(backup([migrated])),[migrated]);
+  for(const bad of [{min:5,max:-5},{min:-11},{max:10.5},{min:.1},{spin:0},{type:'yes'},{direction:1}])assert.throws(()=>validateDrill({...migrated,random:{...migrated.random,...bad}}));
+});
+test('random types map to backspin, empty and topspin motor commands independently per ball',()=>{
+  const d=newDrill();d.random.type=true;d.balls[0].reps=3;
+  const values=[0,.5,.999999];const batches=roundBatches(d,()=>values.shift());
+  assert.deepEqual(batches[0].balls.map(b=>[b.type,b.spin,b.reps]),[['back',1,1],['none',0,1],['top',1,1]]);
+  const wire=drillPacket(batches[0]),v=new DataView(wire.buffer);
+  assert.ok(v.getUint32(7,true)<v.getUint32(11,true));
+  assert.equal(v.getUint32(31,true),v.getUint32(35,true));
+  assert.ok(v.getUint32(55,true)>v.getUint32(59,true));
+  assert.ok(batches[0].balls.every(b=>b.drop===0&&b.speed===2&&b.bpm===30));
+  assert.equal(d.balls[0].reps,3);assert.equal(d.balls[0].type,'top');
+});
+test('direction draws cover both bounds at half steps without changing spin or speed',()=>{
+  const d=newDrill();d.random.direction=true;d.random.min=-10;d.random.max=10;d.balls[0].reps=3;
+  const values=[0,.5,.999999];let balls=roundBatches(d,()=>values.shift())[0].balls;
+  assert.deepEqual(balls.map(b=>b.drop),[-10,0,10]);
+  assert.ok(balls.every(b=>b.type==='top'&&b.spin===1&&b.speed===2));
+  d.random.min=1.5;d.random.max=1.5;
+  balls=roundBatches(d,()=>.9)[0].balls;assert.ok(balls.every(b=>b.drop===1.5));
+});
+test('combined random expands all repeats into finite batches, rerolls each round and keeps source intact',()=>{
+  const d=newDrill();d.random.type=true;d.random.direction=true;
+  d.balls=Array.from({length:5},(_,i)=>({...d.balls[0],reps:20,speed:2+i/2,bpm:30+i}));
+  const before=structuredClone(d);let n=0;
+  const batches=roundBatches(d,()=>((n++*37)%101)/101);
+  assert.equal(batches.length,20);assert.equal(batches.flatMap(b=>b.balls).length,100);
+  for(const batch of batches){assert.equal(batch.balls.length,5);const p=drillPacket(batch);assert.equal(p.length,127);assert.equal(p[4],1);
+    assert.ok(batch.balls.every(b=>b.reps===1&&b.drop>=-4&&b.drop<=4&&Number.isInteger(b.drop*2)));}
+  assert.notDeepEqual(roundBatches(d,()=>.01),roundBatches(d,()=>.99));
+  assert.deepEqual(d,before);
+  d.random.type=false;d.random.direction=false;
+  assert.deepEqual(roundBatches(d)[0].balls,d.balls);assert.equal(roundBatches(d).length,1);
 });

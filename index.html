@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#102323"><title>Beni • Pongbot HU</title><link rel="stylesheet" href="style.css"></head>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#102323"><title>Beni • Pongbot HU</title><link rel="stylesheet" href="style.css?v=0.2"></head>
 <body><main>
-<header><div class="brand"><span class="mark">B.</span><div><span class="eyebrow">BENI EDZŐTÁRSA</span><h1>Pongbot <em>HU</em></h1></div></div><span class="version">Próbaváltozat 0.1</span></header>
+<header><div class="brand"><span class="mark">B.</span><div><span class="eyebrow">BENI EDZŐTÁRSA</span><h1>Pongbot <em>HU</em></h1></div></div><span class="version">Próbaváltozat 0.2</span></header>
 <section class="connection"><div><span class="dot" id="dot"></span><strong id="connection">Nincs kapcsolat</strong><p>Nova S Pro · Bluetooth</p></div><button id="connect">Kapcsolódás</button></section>
 <p id="notice" role="status" aria-live="polite">A saját felület robotvezérlése még kipróbálásra vár. Elsőként egy labdával teszteld.</p>
 <div class="layout"><aside><div class="section-head"><h2>Gyakorlataim</h2><button id="new" class="small">+ Új</button></div><nav id="library" aria-label="Mentett gyakorlatok"></nav><div class="backups"><button id="export" class="secondary">Mentés fájlba ↓</button><button id="import" class="secondary">Betöltés fájlból ↑</button><input id="file" type="file" accept=".json,application/json" hidden></div><p class="muted">A gyakorlatok ebben a böngészőben maradnak. Időnként ments róluk fájlt is.</p></aside>
@@ -9,6 +9,16 @@
 <fieldset id="editor"><label class="name">Gyakorlat neve<input id="name" maxlength="60" autocomplete="off"></label>
 <div class="settings"><label>Ismétlés (kör)<input id="rounds" type="number" min="1" max="200" step="1"></label><label>Szünet körönként (mp)<input id="rest" type="number" min="0" max="120" step="1"></label><label>Ívmagasság<input id="height" type="number" min="-50" max="100" step="1"></label></div>
 <p class="muted">Az ívmagasság a teljes gyakorlatra érvényes. A fej oldalirányú elforgatását kézzel állítod; az alábbi típusok függőleges kerékállásra értendők.</p>
+<section class="random-settings" aria-labelledby="random-title">
+<h3 id="random-title">Véletlen edzés</h3>
+<label class="toggle"><input id="random-type" type="checkbox"><span>Véletlen labdatípus <small>Nyesett, üres vagy pörgetett, labdánként új választással.</small></span></label>
+<label>Pörgetés erőssége a véletlen labdáknál<input id="random-spin" type="number" min="0.5" max="10" step="0.5"></label>
+<label class="toggle"><input id="random-direction" type="checkbox"><span>Véletlen oldalirány <small>Labdánként új célirány a megadott határok között.</small></span></label>
+<div class="random-range"><label>Alsó határ<input id="random-min" type="number" min="-10" max="10" step="0.5"></label><label>Felső határ<input id="random-max" type="number" min="-10" max="10" step="0.5"></label></div>
+<button id="random-full" class="secondary">Teljes tartomány: −10…+10</button>
+<p class="muted">A két kapcsoló külön és együtt is használható. A bekapcsolt véletlen beállítás felülírja az alábbi labdatípust/pörgetést, illetve oldalirányt. A sebesség, ütem és ívmagasság marad a beállított érték. Ugyanaz a típus vagy irány egymás után is jöhet.</p>
+<p class="muted">Kezdj szűkebb oldalmozgással (például −4…+4). A teljes tartomány nem garantálja, hogy minden labda az asztalra érkezik: ez a robot helyzetétől és a többi beállítástól is függ. Hosszú véletlen sorozatban ötlabdánként rövid átmeneti szünet lehet.</p>
+</section>
 <div class="sequence-label"><h3>Labdasorozat</h3><span>Oldalirány: 0 = közép</span></div><div id="balls"></div>
 <button id="add" class="secondary">+ Labdabeállítás hozzáadása</button>
 <div class="save-row"><button id="save">Mentés</button><button id="duplicate" class="secondary">Mentés másolatként</button><button id="delete" class="text-button">Törlés</button></div></fieldset>
@@ -16,4 +26,4 @@
 </section></div>
 <details><summary>Használat és tudnivalók</summary><p>Androidon Chrome-ban, HTTPS webcímről nyisd meg. A robothoz egyszerre egy vezérlő kapcsolódjon. A kijelző maradjon bekapcsolva edzés közben. Ha a lap háttérbe kerül, a program megkísérli leállítani az adogatást. Kapcsolatvesztésnél a szoftver nem tudja garantálni a robot leállását: szükség esetén a robot kapcsolójával állítsd le.</p><p>A mintagyakorlatok kiindulási beállítások: a robot helyzetéhez és a labdákhoz be kell állítani őket. A sebesség és pörgetés 0–10 skálája nem m/s és nem fordulat/s. Az oldalirány előjelét első próbakor ellenőrizd a robot elhelyezéséhez képest.</p><p>A JSON mentések ennek a saját magyar alkalmazásnak a formátumát használják; a gyári app és a Nova Drill Control mentéseit nem importálják.</p><p>Saját fejlesztésű, nem hivatalos vezérlő. A kommunikáció megértéséhez az <a href="https://github.com/olanga/nova" target="_blank" rel="noopener">olanga/nova</a> közösségi projekt szolgált referenciaként. A próba során a sebességet, irányokat, mentést és a leállítást is ellenőrizni kell.</p></details>
 <footer>BENI · PONGBOT HU <span>Menthető gyakorlatok. Saját ritmus.</span></footer>
-</main><script type="module" src="js/app.js"></script></body></html>
+</main><script type="module" src="js/app.js?v=0.2"></script></body></html>

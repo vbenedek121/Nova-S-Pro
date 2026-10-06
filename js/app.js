@@ -1,6 +1,7 @@
-import {STORE,copy,validateDrill,readBackup,backup,newDrill,examples} from './model.js';
+import {STORE,copy,validateDrill,readBackup,backup,newDrill,examples} from './model.js?v=0.2';
 import {limitedSpin} from './protocol.js';
 import {Robot} from './robot.js';
+import {roundBatches} from './sequence.js?v=0.2';
 const $=id=>document.getElementById(id), robot=new Robot();
 let drills=[],current,dirty=false,storageBroken=false,session=null,epoch=0,wake=null;
 function message(text,error=false){$('notice').textContent=text;$('notice').classList.toggle('error',error);}
@@ -15,7 +16,14 @@ function library(){
 function select(d){current=copy(d);dirty=false;render();}
 function render(){
   for(const k of ['name','height','rounds','rest'])$(k).value=current[k];
+  renderRandom();
   $('saved').textContent=dirty?'Nincs elmentve':'Mentve';renderBalls();library();controls();
+}
+function renderRandom(){
+  for(const key of ['type','direction'])$('random-'+key).checked=current.random[key];
+  for(const key of ['spin','min','max'])$('random-'+key).value=current.random[key];
+  $('random-spin').disabled=!current.random.type;
+  for(const key of ['min','max','full'])$('random-'+key).disabled=!current.random.direction;
 }
 function numberField(ball,key,label,min,max,step){
   const l=document.createElement('label');l.textContent=label;
@@ -31,18 +39,25 @@ function renderBalls(){
     const fields=document.createElement('div');fields.className='ball-fields';const label=document.createElement('label');label.textContent='Labda típusa';const type=document.createElement('select');
     for(const [value,text] of [['top','Pörgetett'],['back','Nyesett'],['none','Pörgetés nélkül']]){const op=new Option(text,value);type.append(op);}type.value=ball.type;type.onchange=()=>{ball.type=type.value;if(ball.type==='none')ball.spin=0;changed();renderBalls();};label.append(type);fields.append(label);
     fields.append(numberField(ball,'speed','Sebesség (0–10)',0,10,.5),numberField(ball,'spin','Pörgetés (0–10)',0,10,.5),numberField(ball,'drop','Oldalirány (−10…+10)',-10,10,.5),numberField(ball,'bpm','Labda / perc',30,90,1),numberField(ball,'reps','Egymás utáni labdák',1,20,1));
-    fields.querySelector('[data-key="spin"]').disabled=ball.type==='none';card.append(head,fields);$('balls').append(card);
+    type.disabled=current.random.type;
+    fields.querySelector('[data-key="spin"]').disabled=current.random.type||ball.type==='none';
+    fields.querySelector('[data-key="drop"]').disabled=current.random.direction;
+    if(current.random.type||current.random.direction)fields.querySelector('[data-key="reps"]').parentElement.firstChild.textContent='Labdák száma (külön sorsolva)';
+    card.append(head,fields);$('balls').append(card);
   });$('add').disabled=current.balls.length>=5;
 }
 function draft(){
   const d=validateDrill(current);
-  for(const ball of d.balls)if(ball.type!=='none' && ball.spin>limitedSpin(ball))throw new Error(`Ehhez a sebességhez legfeljebb ${limitedSpin(ball)} pörgetést állíts be.`);
+  for(const ball of d.balls){const spin=d.random.type?d.random.spin:ball.type==='none'?0:ball.spin;if(spin>limitedSpin(ball))throw new Error(`A ${ball.speed} sebességhez legfeljebb ${limitedSpin(ball)} pörgetést állíts be${d.random.type?' a Véletlen edzés résznél':''}.`);}
   return d;
 }
 function save(asCopy=false){
   try {const d=draft();if(asCopy){d.id=crypto.randomUUID();d.name=(d.name+' – másolat').slice(0,60);}const next=drills.filter(x=>x.id!==d.id);next.push(d);if(next.length>300)throw new Error('Legfeljebb 300 gyakorlat tárolható.');persist(next);select(d);message('A gyakorlat elmentve ebben a böngészőben.');}catch(e){message(e.message,true);}
 }
 for(const key of ['name','height','rounds','rest'])$(key).oninput=()=>{current[key]=key==='name'?$(key).value:($(key).value===''?NaN:Number($(key).value));changed();};
+for(const key of ['type','direction'])$('random-'+key).onchange=()=>{current.random[key]=$('random-'+key).checked;changed();renderRandom();renderBalls();};
+for(const key of ['spin','min','max'])$('random-'+key).oninput=()=>{const input=$('random-'+key);current.random[key]=input.value===''?NaN:Number(input.value);changed();};
+$('random-full').onclick=()=>{current.random.min=-10;current.random.max=10;changed();renderRandom();};
 $('new').onclick=()=>{if(abandon()){select(newDrill());changed();}};
 $('add').onclick=()=>{if(current.balls.length<5){current.balls.push(copy(current.balls.at(-1)));changed();renderBalls();}};
 $('save').onclick=()=>save();$('duplicate').onclick=()=>save(true);
@@ -77,21 +92,28 @@ $('stop').onclick=()=>stop();
 async function start(single=false){
   if(session || !robot.ready)return;
   try{let d=draft();if(single)d={...d,rounds:1,balls:[{...d.balls[0],reps:1}],rest:0};
-    const token=++epoch;session={d,token,completed:0,pending:false,timer:null,watchdog:null};controls();
+    const token=++epoch;session={d,token,completed:0,pending:false,timer:null,watchdog:null,batches:[],batchIndex:0};controls();
     if(navigator.wakeLock){navigator.wakeLock.request('screen').then(lock=>{if(session?.token===token)wake=lock;else lock.release();}).catch(()=>{});}
     let seconds=5;const tick=()=>{if(session?.token!==token)return;if(seconds===0){runRound();return;}$('run-status').textContent=`Indulás ${seconds}…`;$('run-detail').textContent=single?'Egy labda az első beállítással.':d.name;seconds--;session.timer=setTimeout(tick,1000);};tick();
   }catch(e){message(e.message,true);}
 }
 async function runRound(){
+  const s=session;if(!s || s.pending)return;
+  s.batches=roundBatches(s.d);s.batchIndex=0;await runBatch();
+}
+async function runBatch(){
   const s=session;if(!s || s.pending)return;s.pending=true;
-  $('run-status').textContent=`${s.completed+1}. kör / ${s.d.rounds}`;$('run-detail').textContent=s.d.name;
+  const batch=s.batches[s.batchIndex];
+  $('run-status').textContent=`${s.completed+1}. kör / ${s.d.rounds}`;$('run-detail').textContent=s.d.name+(s.d.random.type||s.d.random.direction?' · Véletlen edzés':'');
   // A finite sequence is always sent. No completion response => stop, never repeat blindly.
-  const expected=s.d.balls.reduce((sum,b)=>sum+b.reps*60000/b.bpm,0);
+  const expected=batch.balls.reduce((sum,b)=>sum+b.reps*60000/b.bpm,0);
   s.watchdog=setTimeout(()=>{if(session===s)stop('A robot nem jelzett vissza időben. Az edzés leállítva.');},expected+20000);
-  try{await robot.run(s.d);}catch(e){if(session===s)await stop('Leállítva: '+e.message);}
+  try{await robot.run(batch);}catch(e){if(session===s)await stop('Leállítva: '+e.message);}
 }
 robot.addEventListener('done',()=>{
-  const s=session;if(!s?.pending)return;s.pending=false;clearTimeout(s.watchdog);s.completed++;
+  const s=session;if(!s?.pending)return;s.pending=false;clearTimeout(s.watchdog);s.batchIndex++;
+  if(s.batchIndex<s.batches.length){s.timer=setTimeout(()=>{if(session===s)runBatch();},0);return;}
+  s.completed++;
   if(s.completed>=s.d.rounds){stop('A gyakorlat befejeződött.');return;}
   $('run-status').textContent='Körök közti szünet';$('run-detail').textContent=`${s.completed} kör kész · ${s.d.rest} másodperc pihenő`;
   s.timer=setTimeout(()=>{if(session===s)runRound();},s.d.rest*1000);

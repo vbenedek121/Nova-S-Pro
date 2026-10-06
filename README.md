@@ -1,6 +1,6 @@
 # Pongbot HU – Beni edzőtársa
 
-Saját magyar, mobilra is használható Nova S Pro vezérlő. **0.1 próbaváltozat; valódi roboton még nincs ellenőrizve.** Beni a közösségi Nova Drill Controlt sikeresen tesztelte, ez azonban új, külön implementáció.
+Saját magyar, mobilra is használható Nova S Pro vezérlő. **0.2 próbaváltozat; a véletlen mód valódi roboton még nincs ellenőrizve.** Beni a közösségi Nova Drill Controlt sikeresen tesztelte, ez azonban új, külön implementáció.
 
 ## Funkciók
 
@@ -19,6 +19,16 @@ Androidon Chrome, Bluetooth és HTTPS webcím kell. A gyári appot és más vez�
 A minták nincsenek kalibrálva a te asztalodhoz. A sebesség/pörgetés skálái relatívak. Az oldalirány előjelét az első próbakor ellenőrizd a robot elhelyezéséhez képest. Az ívmagasság teljes kombinációra közös; az oldalpörgetéshez a fejet kézzel kell elfordítani. Elsőként normál, függőleges kerékállással tesztelj.
 
 A **Mentés** a jelenlegi böngészőben tárol; a **Mentés fájlba** minden mentett gyakorlatot és az aktuális szerkesztést exportálja. A fájlból betöltés új példányokat ad hozzá. A gyári és a közösségi vezérlő fájlformátuma nem kompatibilis ezzel a változattal. Nincs felhős fiók, automatikus szinkron vagy garantált offline indulás.
+
+## Véletlen edzés (0.2)
+
+A **Véletlen labdatípus** kapcsoló minden egyes labdánál egyenlő eséllyel választ nyesett, üres és pörgetett között. A pörgetés erőssége itt külön állítható; üres labdánál nulla. A sorok eredeti típusát és pörgetését nem írja át, kikapcsolva azok lépnek ismét életbe.
+
+A **Véletlen oldalirány** minden labdának külön célirányt választ a két határ között, 0,5 lépésenként. A **Teljes tartomány** gomb −10…+10-re állítja. Ez a vezérlés tartománya, nem kalibrált asztalszélesség. Először −4…+4 között próbáld. A kapcsolók egymástól függetlenek; ismétlődhet ugyanaz a típus vagy irány. Sebességet, ütemet és ívmagasságot nem sorsolunk.
+
+A soronkénti labdaszám megmarad, de minden ismétlés saját sorsolást kap. Legfeljebb öt külön labdát küldünk egy véges parancsban. A következő csomag csak befejezési visszajelzés után indul; ötlabdánként rövid átmenet lehet. A beállított pihenő csak a teljes kör után következik. Minden kör új sorsolás; az egylabdás próba is használja a kapcsolókat, de összesen egy labdát küld.
+
+A kapcsolók és határok mentéskor, másolatnál és export/import során megmaradnak. A régi (1. verziós) mentések kikapcsolt véletlen móddal tölthetők be. A 2. verziós mentéseket a 0.2 vagy újabb alkalmazással kell megnyitni.
 
 ## GitHub Pages
 
