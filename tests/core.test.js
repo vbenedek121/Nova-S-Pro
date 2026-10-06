@@ -44,8 +44,8 @@ test('STOP cancels queued feeding packets, follows in-flight operation, and does
 test('old backups migrate with random modes off; new options survive export/import',()=>{
   const d=newDrill();delete d.random;
   const migrated=readBackup(JSON.stringify({format:'pongbot-hu',version:1,drills:[d]}))[0];
-  assert.deepEqual(migrated.random,{type:false,direction:false,spin:1,min:-4,max:4});
-  migrated.random={type:true,direction:true,spin:2,min:-10,max:10};
+  assert.deepEqual(migrated.random,{type:false,direction:false,spin:1,min:-4,max:4,height:false,heightMin:45,heightMax:55});
+  migrated.random={...migrated.random,type:true,direction:true,spin:2,min:-10,max:10};
   assert.deepEqual(readBackup(backup([migrated])),[migrated]);
   for(const bad of [{min:5,max:-5},{min:-11},{max:10.5},{min:.1},{spin:0},{type:'yes'},{direction:1}])assert.throws(()=>validateDrill({...migrated,random:{...migrated.random,...bad}}));
 });
@@ -80,4 +80,29 @@ test('combined random expands all repeats into finite batches, rerolls each roun
   assert.deepEqual(d,before);
   d.random.type=false;d.random.direction=false;
   assert.deepEqual(roundBatches(d)[0].balls,d.balls);assert.equal(roundBatches(d).length,1);
+});
+
+test('height-only mode draws per ball, uses per-ball wire heights and preserves other settings',()=>{
+  const d=newDrill();d.random.height=true;d.random.heightMin=-50;d.random.heightMax=100;d.balls[0].reps=3;
+  const before=structuredClone(d), values=[0,.5,.999999];
+  const batch=roundBatches(d,()=>values.shift())[0];
+  assert.deepEqual(batch.balls.map(b=>b.height),[-50,25,100]);
+  assert.ok(batch.balls.every(b=>b.type==='top'&&b.spin===1&&b.drop===0&&b.speed===2&&b.bpm===30&&b.reps===1));
+  const v=new DataView(drillPacket(batch).buffer);
+  assert.deepEqual([15,39,63].map(p=>v.getFloat32(p,true)),[-20,5,30]);
+  assert.deepEqual(d,before);
+  d.random.height=false;
+  const fixed=new DataView(drillPacket(roundBatches(d)[0]).buffer);
+  assert.ok(Math.abs(fixed.getFloat32(15,true)-((d.height+50)/3-20))<0.00001);
+});
+test('height settings migrate, persist and reject invalid bounds',()=>{
+  const d=newDrill();d.height=80;delete d.random.height;delete d.random.heightMin;delete d.random.heightMax;
+  d.random.type=true;d.random.direction=true;
+  const migrated=readBackup(JSON.stringify({format:'pongbot-hu',version:2,drills:[d]}))[0];
+  assert.equal(migrated.random.height,false);assert.equal(migrated.random.heightMin,75);assert.equal(migrated.random.heightMax,85);
+  assert.equal(migrated.random.type,true);assert.equal(migrated.random.direction,true);
+  migrated.random.height=true;assert.deepEqual(readBackup(backup([migrated])),[migrated]);
+  for(const bad of [{height:'yes'},{heightMin:-51},{heightMax:101},{heightMin:80.5},{heightMin:90,heightMax:70},{heightMin:NaN}])assert.throws(()=>validateDrill({...migrated,random:{...migrated.random,...bad}}));
+  migrated.random.heightMin=50;migrated.random.heightMax=50;
+  assert.equal(roundBatches(migrated,()=>.9)[0].balls[0].height,50);
 });

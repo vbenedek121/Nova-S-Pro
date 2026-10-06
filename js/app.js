@@ -1,7 +1,7 @@
-import {STORE,copy,validateDrill,readBackup,backup,newDrill,examples} from './model.js?v=0.2';
-import {limitedSpin} from './protocol.js';
-import {Robot} from './robot.js';
-import {roundBatches} from './sequence.js?v=0.2';
+import {STORE,copy,validateDrill,readBackup,backup,newDrill,examples} from './model.js?v=0.3';
+import {limitedSpin} from './protocol.js?v=0.3';
+import {Robot} from './robot.js?v=0.3';
+import {roundBatches} from './sequence.js?v=0.3';
 const $=id=>document.getElementById(id), robot=new Robot();
 let drills=[],current,dirty=false,storageBroken=false,session=null,epoch=0,wake=null;
 function message(text,error=false){$('notice').textContent=text;$('notice').classList.toggle('error',error);}
@@ -20,8 +20,10 @@ function render(){
   $('saved').textContent=dirty?'Nincs elmentve':'Mentve';renderBalls();library();controls();
 }
 function renderRandom(){
-  for(const key of ['type','direction'])$('random-'+key).checked=current.random[key];
-  for(const key of ['spin','min','max'])$('random-'+key).value=current.random[key];
+  for(const key of ['type','direction','height'])$('random-'+key).checked=current.random[key];
+  for(const key of ['spin','min','max','heightMin','heightMax'])$('random-'+key).value=current.random[key];
+  $('height').disabled=current.random.height;
+  for(const key of ['heightMin','heightMax','height-around'])$('random-'+key).disabled=!current.random.height;
   $('random-spin').disabled=!current.random.type;
   for(const key of ['min','max','full'])$('random-'+key).disabled=!current.random.direction;
 }
@@ -42,7 +44,7 @@ function renderBalls(){
     type.disabled=current.random.type;
     fields.querySelector('[data-key="spin"]').disabled=current.random.type||ball.type==='none';
     fields.querySelector('[data-key="drop"]').disabled=current.random.direction;
-    if(current.random.type||current.random.direction)fields.querySelector('[data-key="reps"]').parentElement.firstChild.textContent='Labdák száma (külön sorsolva)';
+    if(current.random.type||current.random.direction||current.random.height)fields.querySelector('[data-key="reps"]').parentElement.firstChild.textContent='Labdák száma (külön sorsolva)';
     card.append(head,fields);$('balls').append(card);
   });$('add').disabled=current.balls.length>=5;
 }
@@ -55,8 +57,9 @@ function save(asCopy=false){
   try {const d=draft();if(asCopy){d.id=crypto.randomUUID();d.name=(d.name+' – másolat').slice(0,60);}const next=drills.filter(x=>x.id!==d.id);next.push(d);if(next.length>300)throw new Error('Legfeljebb 300 gyakorlat tárolható.');persist(next);select(d);message('A gyakorlat elmentve ebben a böngészőben.');}catch(e){message(e.message,true);}
 }
 for(const key of ['name','height','rounds','rest'])$(key).oninput=()=>{current[key]=key==='name'?$(key).value:($(key).value===''?NaN:Number($(key).value));changed();};
-for(const key of ['type','direction'])$('random-'+key).onchange=()=>{current.random[key]=$('random-'+key).checked;changed();renderRandom();renderBalls();};
-for(const key of ['spin','min','max'])$('random-'+key).oninput=()=>{const input=$('random-'+key);current.random[key]=input.value===''?NaN:Number(input.value);changed();};
+for(const key of ['type','direction','height'])$('random-'+key).onchange=()=>{current.random[key]=$('random-'+key).checked;changed();renderRandom();renderBalls();};
+for(const key of ['spin','min','max','heightMin','heightMax'])$('random-'+key).oninput=()=>{const input=$('random-'+key);current.random[key]=input.value===''?NaN:Number(input.value);changed();};
+$('random-height-around').onclick=()=>{const h=current.height;if(!Number.isFinite(h)||h< -50||h>100){message('Előbb adj meg érvényes ívmagasságot (−50…100).',true);return;}current.random.heightMin=Math.max(-50,Math.round(h)-5);current.random.heightMax=Math.min(100,Math.round(h)+5);changed();renderRandom();};
 $('random-full').onclick=()=>{current.random.min=-10;current.random.max=10;changed();renderRandom();};
 $('new').onclick=()=>{if(abandon()){select(newDrill());changed();}};
 $('add').onclick=()=>{if(current.balls.length<5){current.balls.push(copy(current.balls.at(-1)));changed();renderBalls();}};
@@ -104,7 +107,7 @@ async function runRound(){
 async function runBatch(){
   const s=session;if(!s || s.pending)return;s.pending=true;
   const batch=s.batches[s.batchIndex];
-  $('run-status').textContent=`${s.completed+1}. kör / ${s.d.rounds}`;$('run-detail').textContent=s.d.name+(s.d.random.type||s.d.random.direction?' · Véletlen edzés':'');
+  $('run-status').textContent=`${s.completed+1}. kör / ${s.d.rounds}`;$('run-detail').textContent=s.d.name+(s.d.random.type||s.d.random.direction||s.d.random.height?' · Véletlen edzés':'');
   // A finite sequence is always sent. No completion response => stop, never repeat blindly.
   const expected=batch.balls.reduce((sum,b)=>sum+b.reps*60000/b.bpm,0);
   s.watchdog=setTimeout(()=>{if(session===s)stop('A robot nem jelzett vissza időben. Az edzés leállítva.');},expected+20000);

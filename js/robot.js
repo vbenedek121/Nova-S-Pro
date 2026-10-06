@@ -1,4 +1,4 @@
-import {SERVICE,WRITE,NOTIFY,ADVERTISED,STOP,handshakeReply,containsDone,drillPacket} from './protocol.js';
+import {SERVICE,WRITE,NOTIFY,ADVERTISED,STOP,handshakeReply,containsDone,drillPacket} from './protocol.js?v=0.3';
 export class Robot extends EventTarget {
   constructor(){super();this.ready=false;this.queue=Promise.resolve();this.generation=0;this.phase='off';}
   signal(type,detail){this.dispatchEvent(new CustomEvent(type,{detail}));}

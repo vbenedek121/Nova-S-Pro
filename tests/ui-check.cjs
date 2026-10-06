@@ -15,13 +15,13 @@ const assert=require('node:assert/strict');
  });
  await page.goto('http://localhost:8080');
  await page.locator('#name').fill('Beni – tenyeres / fonák');await page.locator('#rounds').fill('2');await page.locator('#rest').fill('2');
- await page.locator('#random-type').check();await page.locator('#random-direction').check();await page.locator('#random-full').click();await page.locator('#save').click();
+ await page.locator('#random-type').check();await page.locator('#random-direction').check();await page.locator('#random-full').click();await page.locator('#random-height').check();await page.locator('#random-height-around').click();await page.locator('#random-heightMin').fill('46');await page.locator('#random-heightMax').fill('54');await page.locator('#save').click();
  await page.reload();assert.equal(await page.locator('#name').inputValue(),'Két oldal váltva');
  await page.getByRole('button',{name:'Beni – tenyeres / fonák',exact:false}).click();assert.equal(await page.locator('#rounds').inputValue(),'2');
- assert.ok(await page.locator('#random-type').isChecked());assert.ok(await page.locator('#random-direction').isChecked());assert.equal(await page.locator('#random-min').inputValue(),'-10');assert.equal(await page.locator('#random-max').inputValue(),'10');
+ assert.ok(await page.locator('#random-height').isChecked());assert.equal(await page.locator('#random-heightMin').inputValue(),'46');assert.equal(await page.locator('#random-heightMax').inputValue(),'54');assert.ok(await page.locator('#height').isDisabled());assert.ok(await page.locator('#random-type').isChecked());assert.ok(await page.locator('#random-direction').isChecked());assert.equal(await page.locator('#random-min').inputValue(),'-10');assert.equal(await page.locator('#random-max').inputValue(),'10');
  const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#export').click()]);await download.saveAs('/tmp/pongbot-backup-test.json');
  await page.locator('#file').setInputFiles('/tmp/pongbot-backup-test.json');await page.waitForFunction(()=>document.querySelectorAll('#library button').length===4);
- assert.ok(await page.locator('#random-type').isChecked());assert.ok(await page.locator('#random-direction').isChecked());
+ assert.ok(await page.locator('#random-height').isChecked());assert.equal(await page.locator('#random-heightMin').inputValue(),'46');assert.equal(await page.locator('#random-heightMax').inputValue(),'54');assert.ok(await page.locator('#height').isDisabled());assert.ok(await page.locator('#random-type').isChecked());assert.ok(await page.locator('#random-direction').isChecked());
  assert.ok(await page.locator('#balls select').first().isDisabled());assert.ok(await page.locator('[data-key="drop"]').first().isDisabled());
  await page.locator('#connect').click();await page.waitForFunction(()=>document.querySelector('#connection').textContent.includes('teszt'));
  await page.clock.install();await page.locator('#test').click();await page.clock.fastForward(5100);
@@ -44,7 +44,7 @@ const assert=require('node:assert/strict');
  await done();assert.equal(await page.locator('#notice').textContent(),'A gyakorlat befejeződött.');
  packets=await page.evaluate(()=>window.packets.filter(p=>p[0]===129));
  const randomPackets=packets.slice(count);assert.deepEqual(randomPackets.map(p=>(p.length-7)/24),[5,2,5,2]);
- for(const p of randomPackets){const v=new DataView(Uint8Array.from(p).buffer);for(let offset=7;offset<p.length;offset+=24){assert.equal(v.getUint32(offset+20,true),1);assert.ok(Math.abs(v.getFloat32(offset+12,true))<=22);}}
+ for(const p of randomPackets){const v=new DataView(Uint8Array.from(p).buffer);for(let offset=7;offset<p.length;offset+=24){assert.equal(v.getUint32(offset+20,true),1);assert.ok(Math.abs(v.getFloat32(offset+12,true))<=22);const height=v.getFloat32(offset+8,true);assert.ok(height>=12-0.00001&&height<=14.666667+0.00001);}}
  // Stop after a completed batch but before the queued continuation.
  count=await feedCount();await page.locator('#start').click();await page.clock.fastForward(5100);
  await page.waitForFunction(n=>window.packets.filter(p=>p[0]===129).length===n+1,count);
@@ -64,6 +64,14 @@ const assert=require('node:assert/strict');
  await page.locator('#start').click();await page.clock.fastForward(5100);await page.waitForFunction(n=>window.packets.filter(p=>p[0]===129).length>n,count);
  await page.locator('#stop').click();count=await page.evaluate(()=>window.packets.filter(p=>p[0]===129).length);await page.evaluate(()=>window.robotDone());await page.clock.fastForward(60000);
  assert.equal(await page.evaluate(()=>window.packets.filter(p=>p[0]===129).length),count);
+ // Height-only randomization works; reversed height limits block feeding.
+ await page.locator('#random-type').uncheck();await page.locator('#random-direction').uncheck();
+ await page.locator('#random-heightMin').fill('60');await page.locator('#random-heightMax').fill('50');
+ count=await feedCount();await page.locator('#test').click();assert.match(await page.locator('#notice').textContent(),/alsó határa/);assert.equal(await feedCount(),count);
+ await page.locator('#random-height-around').click();assert.equal(await page.locator('#random-heightMin').inputValue(),'45');assert.equal(await page.locator('#random-heightMax').inputValue(),'55');
+ await page.locator('#test').click();await page.clock.fastForward(5100);await page.waitForFunction(n=>window.packets.filter(p=>p[0]===129).length===n+1,count);
+ await done();await page.locator('#random-height').uncheck();assert.equal(await page.locator('#height').inputValue(),'50');assert.ok(await page.locator('#height').isEnabled());
+ await page.locator('#random-height').check();await page.locator('#random-type').check();await page.locator('#random-direction').check();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  await page.screenshot({path:'/tmp/pongbot-mobile.png',fullPage:true});
  assert.deepEqual(errors,[]);

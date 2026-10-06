@@ -53,7 +53,7 @@ export function drillPacket(drill) {
   drill.balls.forEach((ball,i)=>{
     const p=7+i*24,[upper,lower]=wheels(ball);
     v.setUint32(p,upper,true);v.setUint32(p+4,lower,true);
-    v.setFloat32(p+8,(drill.height+50)/3-20,true);
+    v.setFloat32(p+8,((ball.height??drill.height)+50)/3-20,true);
     v.setFloat32(p+12,ball.drop*2.2,true);
     v.setFloat32(p+16,ball.bpm/60,true);v.setUint32(p+20,ball.reps,true);
   });

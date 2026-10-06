@@ -2,7 +2,7 @@
 // two equal types/positions in a row. A new plan is drawn for every round.
 export function roundBatches(drill, rng=Math.random) {
   const options=drill.random;
-  if (!options?.type && !options?.direction) return [{...drill,balls:drill.balls.map(b=>({...b}))}];
+  if (!options?.type && !options?.direction && !options?.height) return [{...drill,balls:drill.balls.map(b=>({...b}))}];
   const balls=[];
   for (const template of drill.balls) {
     for (let i=0;i<template.reps;i++) {
@@ -12,6 +12,7 @@ export function roundBatches(drill, rng=Math.random) {
         ball.spin=ball.type==='none'?0:options.spin;
       }
       if (options.direction) ball.drop=options.min+Math.floor(rng()*((options.max-options.min)*2+1))/2;
+      if (options.height) ball.height=options.heightMin+Math.floor(rng()*(options.heightMax-options.heightMin+1));
       balls.push(ball);
     }
   }
