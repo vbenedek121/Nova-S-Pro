@@ -1,6 +1,6 @@
 # Pongbot HU – Beni edzőtársa
 
-Saját magyar, mobilra is használható Nova S Pro vezérlő. **0.3 próbaváltozat; a véletlen mód valódi roboton még nincs ellenőrizve.** Beni a közösségi Nova Drill Controlt sikeresen tesztelte, ez azonban új, külön implementáció.
+Saját magyar, mobilra is használható Nova S Pro vezérlő. **0.4 próbaváltozat; a véletlen mód valódi roboton még nincs ellenőrizve.** Beni a közösségi Nova Drill Controlt sikeresen tesztelte, ez azonban új, külön implementáció.
 
 ## Funkciók
 
@@ -19,6 +19,14 @@ Androidon Chrome, Bluetooth és HTTPS webcím kell. A gyári appot és más vez�
 A minták nincsenek kalibrálva a te asztalodhoz. A sebesség/pörgetés skálái relatívak. Az oldalirány előjelét az első próbakor ellenőrizd a robot elhelyezéséhez képest. Az alap-ívmagasság teljes kombinációra közös, véletlen fel-le módban labdánként új értéket kap; az oldalpörgetéshez a fejet kézzel kell elfordítani. Elsőként normál, függőleges kerékállással tesztelj.
 
 A **Mentés** a jelenlegi böngészőben tárol; a **Mentés fájlba** minden mentett gyakorlatot és az aktuális szerkesztést exportálja. A fájlból betöltés új példányokat ad hozzá. A gyári és a közösségi vezérlő fájlformátuma nem kompatibilis ezzel a változattal. Nincs felhős fiók, automatikus szinkron vagy garantált offline indulás.
+
+## Távirányító nézet (0.4)
+
+Induláskor a rövid távirányító nézet jelenik meg: mentett edzésterv legördülő választó, körök/labdák/pihenő összegzése, nagy **INDÍTÁS** és **STOP**, valamint **1 labda próba** gomb. Az edzés kiválasztása önmagában nem indítja el a robotot. Futás közben az edzésváltás és a szerkesztés letiltva; előbb STOP kell.
+
+A **Szerkesztés** / **Edzés szerkesztése** gombbal nyitható meg a teljes beállításlista. A **Mentés és távirányító** mentés után visszavisz a vezérléshez. Új edzés közvetlenül a távirányítóról is létrehozható. A nézetek közti váltás megőrzi a módosításokat, de nem ment automatikusan; a nem mentett állapot külön látható. Másik edzés választása előtt a módosítások elvetését meg kell erősíteni. A fájlmentés és betöltés a szerkesztő nézetben marad.
+
+Indításkor a szerkesztőből is a távirányítóra vált a felület; a Bluetooth-kapcsolat nézetváltáskor megmarad. A nézetváltás nem új weboldalt tölt be. A korábbi edzések formátuma változatlan.
 
 ## Véletlen edzés (0.3)
 

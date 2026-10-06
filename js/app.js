@@ -7,12 +7,46 @@ let drills=[],current,dirty=false,storageBroken=false,session=null,epoch=0,wake=
 function message(text,error=false){$('notice').textContent=text;$('notice').classList.toggle('error',error);}
 try {const text=localStorage.getItem(STORE);drills=text?readBackup(text):examples();} catch {storageBroken=true;drills=examples();message('A korábbi mentés nem olvasható. Az eredetit nem írom felül. Előbb exportáld a mostani gyakorlatokat, vagy állítsd helyre a korábbi mentést.',true);}
 function persist(next){if(storageBroken)throw new Error('A böngésző mentése nem olvasható. Használd a Mentés fájlba lehetőséget.');localStorage.setItem(STORE,backup(next));drills=next;}
-function changed(){dirty=true;$('saved').textContent='Nincs elmentve';}
+function changed(){dirty=true;$('saved').textContent='Nincs elmentve';renderRemote();}
 function abandon(){return !dirty || confirm('A módosítások nincsenek elmentve. Elveted őket?');}
 function library(){
   $('library').replaceChildren();
-  for(const d of drills){const button=document.createElement('button');button.className='drill'+(d.id===current?.id?' selected':'');button.textContent=d.name;const info=document.createElement('span');info.textContent=`${d.balls.length} beállítás · ${d.rounds} kör`;button.append(info);button.disabled=!!session;button.onclick=()=>{if(abandon())select(d);};$('library').append(button);}
+  for(const d of drills){const button=document.createElement('button');button.className='drill'+(d.id===current?.id?' selected':'');button.textContent=d.name;const info=document.createElement('span');info.textContent=`${d.balls.length} beállítás · ${d.rounds} kör`;button.append(info);button.disabled=!!session;button.onclick=()=>{if(abandon()){select(d);showView('remote');}};$('library').append(button);}
 }
+let view='remote';
+const runPanel=document.querySelector('.run-panel');
+function showView(next){
+  if(session&&next!=='remote')return;
+  view=next;const remote=next==='remote';
+  $('remote').hidden=!remote;$('editor-view').hidden=remote;
+  document.body.classList.toggle('remote-mode',remote);
+  $('show-remote').setAttribute('aria-pressed',String(remote));$('show-editor').setAttribute('aria-pressed',String(!remote));
+  $(remote?'remote-run-slot':'editor-run-slot').append(runPanel);
+  renderRemote();window.scrollTo({top:0,behavior:'instant'});
+}
+function renderRemote(){
+  if(!current)return;
+  const picker=$('remote-drill');picker.replaceChildren();
+  for(const d of drills)picker.append(new Option(d.id===current.id&&dirty?current.name+' (módosítva)':d.name,d.id));
+  if(!drills.some(d=>d.id===current.id))picker.append(new Option(current.name+' (nincs mentve)',current.id));
+  picker.value=current.id;picker.disabled=!!session;
+  $('remote-saved').textContent=dirty?'Nincs elmentve':'Mentett edzés';
+  $('remote-rounds').textContent=Number.isFinite(current.rounds)?current.rounds:'—';
+  $('remote-balls').textContent=current.balls.reduce((sum,b)=>sum+(Number.isFinite(b.reps)?b.reps:0),0);
+  $('remote-rest').textContent=Number.isFinite(current.rest)?current.rest:'—';
+  const modes=[['type','labdatípus'],['direction','oldalirány'],['height','fel-le']].filter(([key])=>current.random[key]).map(([,label])=>label);
+  $('remote-modes').textContent=modes.length?'Véletlen: '+modes.join(' · '):'Beállított labdasorozat';
+}
+$('show-remote').onclick=()=>showView('remote');
+$('show-editor').onclick=$('remote-edit').onclick=()=>showView('editor');
+$('remote-new').onclick=()=>$('new').click();
+$('remote-drill').onchange=()=>{
+  if(session){$('remote-drill').value=current.id;return;}
+  const selected=drills.find(d=>d.id===$('remote-drill').value);
+  if(!selected)return;
+  if(!abandon()){$('remote-drill').value=current.id;return;}
+  select(selected);
+};
 function select(d){current=copy(d);dirty=false;render();}
 function render(){
   for(const k of ['name','height','rounds','rest'])$(k).value=current[k];
@@ -54,14 +88,14 @@ function draft(){
   return d;
 }
 function save(asCopy=false){
-  try {const d=draft();if(asCopy){d.id=crypto.randomUUID();d.name=(d.name+' – másolat').slice(0,60);}const next=drills.filter(x=>x.id!==d.id);next.push(d);if(next.length>300)throw new Error('Legfeljebb 300 gyakorlat tárolható.');persist(next);select(d);message('A gyakorlat elmentve ebben a böngészőben.');}catch(e){message(e.message,true);}
+  try {const d=draft();if(asCopy){d.id=crypto.randomUUID();d.name=(d.name+' – másolat').slice(0,60);}const next=drills.filter(x=>x.id!==d.id);next.push(d);if(next.length>300)throw new Error('Legfeljebb 300 gyakorlat tárolható.');persist(next);select(d);showView('remote');message('A gyakorlat elmentve ebben a böngészőben.');}catch(e){message(e.message,true);}
 }
 for(const key of ['name','height','rounds','rest'])$(key).oninput=()=>{current[key]=key==='name'?$(key).value:($(key).value===''?NaN:Number($(key).value));changed();};
 for(const key of ['type','direction','height'])$('random-'+key).onchange=()=>{current.random[key]=$('random-'+key).checked;changed();renderRandom();renderBalls();};
 for(const key of ['spin','min','max','heightMin','heightMax'])$('random-'+key).oninput=()=>{const input=$('random-'+key);current.random[key]=input.value===''?NaN:Number(input.value);changed();};
 $('random-height-around').onclick=()=>{const h=current.height;if(!Number.isFinite(h)||h< -50||h>100){message('Előbb adj meg érvényes ívmagasságot (−50…100).',true);return;}current.random.heightMin=Math.max(-50,Math.round(h)-5);current.random.heightMax=Math.min(100,Math.round(h)+5);changed();renderRandom();};
 $('random-full').onclick=()=>{current.random.min=-10;current.random.max=10;changed();renderRandom();};
-$('new').onclick=()=>{if(abandon()){select(newDrill());changed();}};
+$('new').onclick=()=>{if(abandon()){select(newDrill());changed();showView('editor');}};
 $('add').onclick=()=>{if(current.balls.length<5){current.balls.push(copy(current.balls.at(-1)));changed();renderBalls();}};
 $('save').onclick=()=>save();$('duplicate').onclick=()=>save(true);
 $('delete').onclick=()=>{if(!confirm(`Törlöd ezt a gyakorlatot: ${current.name}?`))return;try{const next=drills.filter(x=>x.id!==current.id);if(!next.length)next.push(newDrill());persist(next);select(next[0]);message('A gyakorlat törölve.');}catch(e){message(e.message,true);}};
@@ -70,10 +104,12 @@ $('export').onclick=()=>{try{const d=draft(),all=drills.filter(x=>x.id!==d.id);a
 $('import').onclick=()=>$('file').click();
 $('file').onchange=async()=>{
   const file=$('file').files[0];$('file').value='';if(!file)return;
-  try{if(file.size>2000000)throw new Error('Túl nagy mentési fájl (legfeljebb 2 MB).');const incoming=readBackup(await file.text());if(!abandon())return;if(drills.length+incoming.length>300)throw new Error('A betöltéssel túllépnéd a 300 gyakorlatot.');const next=[...drills,...incoming.map(x=>({...x,id:crypto.randomUUID()}))];persist(next);select(next.at(-1));message(`${incoming.length} gyakorlat betöltve. A meglévők megmaradtak.`);}catch(e){message('Nem sikerült betölteni: '+e.message,true);}
+  try{if(file.size>2000000)throw new Error('Túl nagy mentési fájl (legfeljebb 2 MB).');const incoming=readBackup(await file.text());if(!abandon())return;if(drills.length+incoming.length>300)throw new Error('A betöltéssel túllépnéd a 300 gyakorlatot.');const next=[...drills,...incoming.map(x=>({...x,id:crypto.randomUUID()}))];persist(next);select(next.at(-1));showView('remote');message(`${incoming.length} gyakorlat betöltve. A meglévők megmaradtak.`);}catch(e){message('Nem sikerült betölteni: '+e.message,true);}
 };
 function controls(){
   const active=!!session;
+  for(const id of ['show-editor','remote-edit','remote-new'])$(id).disabled=active;
+  renderRemote();
   $('editor').disabled=active;$('new').disabled=active;$('import').disabled=active;$('export').disabled=active;
   $('connect').disabled=active;$('connect').textContent=robot.ready?'Kapcsolat bontása':'Kapcsolódás';
   $('test').disabled=!robot.ready||active;$('start').disabled=!robot.ready||active;$('stop').disabled=!robot.ready&&!active;
@@ -95,7 +131,7 @@ $('stop').onclick=()=>stop();
 async function start(single=false){
   if(session || !robot.ready)return;
   try{let d=draft();if(single)d={...d,rounds:1,balls:[{...d.balls[0],reps:1}],rest:0};
-    const token=++epoch;session={d,token,completed:0,pending:false,timer:null,watchdog:null,batches:[],batchIndex:0};controls();
+    const token=++epoch;session={d,token,completed:0,pending:false,timer:null,watchdog:null,batches:[],batchIndex:0};showView('remote');controls();
     if(navigator.wakeLock){navigator.wakeLock.request('screen').then(lock=>{if(session?.token===token)wake=lock;else lock.release();}).catch(()=>{});}
     let seconds=5;const tick=()=>{if(session?.token!==token)return;if(seconds===0){runRound();return;}$('run-status').textContent=`Indulás ${seconds}…`;$('run-detail').textContent=single?'Egy labda az első beállítással.':d.name;seconds--;session.timer=setTimeout(tick,1000);};tick();
   }catch(e){message(e.message,true);}
@@ -125,5 +161,5 @@ $('start').onclick=()=>start();$('test').onclick=()=>start(true);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&session)stop('Az edzés leállítva, mert a lap háttérbe került.');});
 window.addEventListener('pagehide',()=>{if(session)stop();});
 window.addEventListener('beforeunload',e=>{if(dirty||session){e.preventDefault();e.returnValue='';}});
-select(drills[0]);
+select(drills[0]);showView('remote');
 if(!window.isSecureContext || !navigator.bluetooth)message('A szerkesztés működik. Robotvezérléshez Androidon Chrome-ban, HTTPS webcímen nyisd meg az oldalt.');
