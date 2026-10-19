@@ -39,19 +39,30 @@ export function handshakeReply(data) {
   const digest=new TextEncoder().encode(md5(input+text.slice(18)));
   const reply=new Uint8Array(35); reply.set([8,32,0]);reply.set(digest,3);return reply;
 }
-export function wheels(ball) {
-  const base=970+630.5*ball.speed, delta=ball.type==='none'?0:342*ball.spin*(ball.type==='back'?-1:1);
-  return [Math.round(clamp(base+delta,400,7500)),Math.round(clamp(base-delta,400,7500))];
+// A gyári APK getMtRobotParams számolómoduljából ellenőrzött konstansok.
+export const MOTOR_BASE=969.9321047526673;
+export const MOTOR_SPEED=630.4558680892338;
+export const MOTOR_SPIN=342.0362558431195;
+export function wheels(ball,neutralCorrection=0) {
+  // Az üres labda nem örökölheti egy korábbi nyesett labda motorértékeit.
+  const neutral=ball.type==='none'||ball.spin===0;
+  if(!neutral && ball.motor)return [ball.motor.upper,ball.motor.lower];
+  const base=MOTOR_BASE+MOTOR_SPEED*ball.speed;
+  const delta=neutral?neutralCorrection:MOTOR_SPIN*ball.spin*(ball.type==='back'?-1:1);
+  const a=base+delta,b=base-delta;
+  if(!Number.isFinite(a)||!Number.isFinite(b)||a<0||b<0||a>7500||b>7500)throw new Error('A sebesség és pörgetés együtt kívül esik a robot tartományán.');
+  return [Math.round(a),Math.round(b)];
 }
 export function limitedSpin(ball) {
-  const base=970+630.5*ball.speed;
-  return Math.max(0,Math.floor(Math.min(base-400,7500-base)/342*2)/2);
+  const base=MOTOR_BASE+MOTOR_SPEED*ball.speed;
+  return Math.max(0,Math.min(10,Math.floor(Math.min(base,7500-base)/MOTOR_SPIN*2)/2));
 }
-export function drillPacket(drill) {
+export function drillPacket(drill,neutralCorrection=()=>0) {
   const buffer=new ArrayBuffer(7+24*drill.balls.length), v=new DataView(buffer);
   v.setUint8(0,129);v.setUint16(1,4+24*drill.balls.length,true);v.setUint8(3,1);v.setUint16(4,1,true);
   drill.balls.forEach((ball,i)=>{
-    const p=7+i*24,[upper,lower]=wheels(ball);
+    const correction=drill.neutralOverride??neutralCorrection(ball.speed);
+    const p=7+i*24,[upper,lower]=wheels(ball,correction);
     v.setUint32(p,upper,true);v.setUint32(p+4,lower,true);
     v.setFloat32(p+8,((ball.height??drill.height)+50)/3-20,true);
     v.setFloat32(p+12,ball.drop*2.2,true);

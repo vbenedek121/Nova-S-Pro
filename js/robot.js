@@ -1,4 +1,4 @@
-import {SERVICE,WRITE,NOTIFY,ADVERTISED,STOP,handshakeReply,containsDone,drillPacket} from './protocol.js?v=0.3';
+import {SERVICE,WRITE,NOTIFY,ADVERTISED,STOP,handshakeReply,containsDone,drillPacket} from './protocol.js?v=0.5';
 export class Robot extends EventTarget {
   constructor(){super();this.ready=false;this.queue=Promise.resolve();this.generation=0;this.phase='off';}
   signal(type,detail){this.dispatchEvent(new CustomEvent(type,{detail}));}
@@ -41,7 +41,7 @@ export class Robot extends EventTarget {
     });
     this.queue=work;return work;
   }
-  run(drill){if(!this.ready)return Promise.reject(new Error('Előbb kapcsolódj a robothoz.'));return this.write(drillPacket(drill));}
+  run(drill,correction){if(!this.ready)return Promise.reject(new Error('Előbb kapcsolódj a robothoz.'));return this.write(drillPacket(drill,correction));}
   stop(){this.generation++;if(!this.device?.gatt.connected)return Promise.resolve(false);return this.write(STOP);}
   disconnect(){clearTimeout(this.timer);this.device?.gatt.disconnect();this.lost();}
   lost(){

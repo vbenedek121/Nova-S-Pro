@@ -1,59 +1,71 @@
-# Pongbot HU – Beni edzőtársa
+# Pongbot HU 0.5 – Beni edzőtársa
 
-Saját magyar, mobilra is használható Nova S Pro vezérlő. **0.4 próbaváltozat; a véletlen mód valódi roboton még nincs ellenőrizve.** Beni a közösségi Nova Drill Controlt sikeresen tesztelte, ez azonban új, külön implementáció.
+Magyar Nova S Pro webes vezérlő, a gyári edzéscsoportokhoz igazított felépítéssel. Nem hivatalos alkalmazás. Ez a változat még nem volt kipróbálva valódi roboton.
 
-## Funkciók
+## Mi változott?
 
-- Saját nevű gyakorlatok mentése a böngésző helyi tárhelyére; másolat, törlés.
-- Teljes gyűjtemény mentése JSON fájlba, additív visszatöltés a meglévők törlése nélkül.
-- 1–5 labdabeállítás; sebesség, felső/alsó pörgetés, irány, gyakoriság, ismétlésszám.
-- Közös ívmagasság, körök száma, körök közötti szünet.
-- 5 másodperces indulási visszaszámlálás, egyetlen labdás próba, leállítás.
-- Minden kör véges robotparancs. Visszajelzés nélkül nem indít újabb kört.
-- Háttérbe tett lapnál leállítási kísérlet. Kapcsolatvesztéskor nincs automatikus újraindítás.
+- Alap / Basic, Kombinált / Combined, Összetett / Complex és Saját edzések.
+- 34 kereshető minta, eredeti névvel és magyar jelentéssel; három szint, jobb-/balkezes iránytükrözés.
+- Külön látszik, milyen labdát küld a robot. A Loop edzés nyesett labdát ad a pörgetés gyakorlásához.
+- Időalapú edzés (alapérték 5 perc), köralapú edzés, véletlen sorrend, alapból 0 másodperc körszünet.
+- Szüneteltetés az aktuális sorozat végén, majd folytatás. Azonnali leállításhoz STOP.
+- Választható, melyik labdabeállításból kérsz egyetlen próbalabdát.
+- Az üres labda nem használ korábbi nyesett motorértékeket; 0-s pörgetés is üresként normalizálódik.
+- Üreslabda-kalibrálás: sebességhez menthető kerékegyensúly, interpoláció a köztes sebességeken. Csak üres labdánál érvényes.
+- A gyári APK izolált számolófüggvényéből ellenőrzött fordulatszámképlet, a korábbi 400-as alsó szoftveres korlát megszüntetésével. A megengedett tartomány 0–7500 fordulat/perc.
+- Korábbi 0.1–0.4-es saját mentések importálhatók. A távirányító és az összes korábbi véletlen kapcsoló megmaradt. A helyi tároló kulcsa változatlan.
 
-## Használat
+## Az edzésnevek jelentése
 
-Androidon Chrome, Bluetooth és HTTPS webcím kell. A gyári appot és más vezérlőlapokat zárd be, majd Kapcsolódás → robot kiválasztása. Először néhány labdával, az **1 labda próba** gombbal tesztelj. A LEÁLLÍTÁS gombot is próbáld ki. Ha a Bluetooth megszakad, a stop parancs nem továbbítható, ilyenkor szükség esetén a robot kapcsolóját használd.
+| Név | Magyar jelentés | A robot labdája |
+|---|---|---|
+| Push(B) | Fonák nyesett tolás | Nyesett |
+| Push(F) | Tenyeres nyesett tolás | Nyesett |
+| Drive(B) | Fonák kontra | Pörgetett |
+| Drive(F) | Tenyeres kontra | Pörgetett |
+| Loop(B) | Fonák pörgetés nyesettre | Nyesett |
+| Loop(F) | Tenyeres pörgetés nyesettre | Nyesett |
 
-A minták nincsenek kalibrálva a te asztalodhoz. A sebesség/pörgetés skálái relatívak. Az oldalirány előjelét az első próbakor ellenőrizd a robot elhelyezéséhez képest. Az alap-ívmagasság teljes kombinációra közös, véletlen fel-le módban labdánként új értéket kap; az oldalpörgetéshez a fejet kézzel kell elfordítani. Elsőként normál, függőleges kerékállással tesztelj.
+B = Backhand = fonák. F = Forehand = tenyeres. A név a játékos gyakorolt ütését jelöli.
 
-A **Mentés** a jelenlegi böngészőben tárol; a **Mentés fájlba** minden mentett gyakorlatot és az aktuális szerkesztést exportálja. A fájlból betöltés új példányokat ad hozzá. A gyári és a közösségi vezérlő fájlformátuma nem kompatibilis ezzel a változattal. Nincs felhős fiók, automatikus szinkron vagy garantált offline indulás.
+## A minták eredete és korlátja
 
-## Távirányító nézet (0.4)
+A nevek és az ütés/labda kapcsolat a gyári Nova S Pro kézikönyv alapján szerepelnek. A számszerű minták az olanga/nova közösségi vezérlő 2026. október 19-én elért forrásából származnak. A Drive(F)–Drive(F), Loop(F)–Loop(F) és háromlabdás Drive(F) sorozatok középső célirányát a kézikönyv középre helyezett labdáihoz igazítottuk.
 
-Induláskor a rövid távirányító nézet jelenik meg: mentett edzésterv legördülő választó, körök/labdák/pihenő összegzése, nagy **INDÍTÁS** és **STOP**, valamint **1 labda próba** gomb. Az edzés kiválasztása önmagában nem indítja el a robotot. Futás közben az edzésváltás és a szerkesztés letiltva; előbb STOP kell.
+**Ez nem a gyártó hitelesített teljes edzésadatbázisa.** A kézikönyv 36 normál és 8 hálóközeli kombinációt ír le. A rendelkezésre álló közösségi készletben 34 normál minta található; hálóközeli mintákat nem találtunk ki. Több kombinált mintánál a három szint forrásértékei azonosak. A 2/3 Court Random Drive a közösségi változat mintája, nem hitelesített gyári pályaszórás.
 
-A **Szerkesztés** / **Edzés szerkesztése** gombbal nyitható meg a teljes beállításlista. A **Mentés és távirányító** mentés után visszavisz a vezérléshez. Új edzés közvetlenül a távirányítóról is létrehozható. A nézetek közti váltás megőrzi a módosításokat, de nem ment automatikusan; a nem mentett állapot külön látható. Másik edzés választása előtt a módosítások elvetését meg kell erősíteni. A fájlmentés és betöltés a szerkesztő nézetben marad.
+A gyári APK-ban a rendszeredzések API-jának hivatkozása megtalálható. A rendszeredzés-lista nyilvános kérésére a szerver bejelentkezési tokent kér; teljes gyári adatokat nem kaptunk. A gyári app fiókját és hitelesítését nem módosítottuk.
 
-Indításkor a szerkesztőből is a távirányítóra vált a felület; a Bluetooth-kapcsolat nézetváltáskor megmarad. A nézetváltás nem új weboldalt tölt be. A korábbi edzések formátuma változatlan.
+Források:
+- https://store.pongbotsports.com/pages/support
+- https://github.com/olanga/nova
+- A gyártói oldalról linkelt appintl-pr-1.0.11_1208_1443.apk; az 1.0.12 binárisa nem volt vizsgálva.
 
-## Véletlen edzés (0.3)
+## Üres labda beállítása
 
-A **Véletlen labdatípus** kapcsoló minden egyes labdánál egyenlő eséllyel választ nyesett, üres és pörgetett között. A pörgetés erőssége itt külön állítható; üres labdánál nulla. A sorok eredeti típusát és pörgetését nem írja át, kikapcsolva azok lépnek ismét életbe.
+1. Állítsd a fejet a normál, felső/alsó kerékállásba.
+2. Válaszd ki a sebességet és ívmagasságot az Üres labda beállítása panelen.
+3. Kérj egyetlen próbalabdát. Ha nyesett, finoman a pozitív irányba állítsd a kerékegyensúlyt; ha pörgetett, negatívba.
+4. Kérj újabb egyetlen labdát, és mentsd a bevált értéket. Több sebességen is készíthetsz mentett pontot.
 
-A **Véletlen oldalirány** minden labdának külön célirányt választ a két határ között, 0,5 lépésenként. A **Teljes tartomány** gomb −10…+10-re állítja. Ez a vezérlés tartománya, nem kalibrált asztalszélesség. Először −4…+4 között próbáld. A kapcsolók egymástól függetlenek; ismétlődhet ugyanaz a típus vagy irány. Sebességet és ütemet nem sorsolunk.
+A pozitív korrekció növeli a felső kerék fordulatát és ugyanannyival csökkenti az alsóét. Ez nem bizonyított javítása Beni robotja tapasztalt hibájának; a fizikai eredményt a roboton kell ellenőrizni. A korrekció az adott böngészőben marad, a gyakorlatok JSON-mentése nem tartalmazza.
 
-A **Véletlen fel-le állítás** kapcsoló minden labdánál új ívmagasságot választ a megadott alsó és felső határ között, egész lépésekben (−50…100 skálán, nem centiméterben). A három kapcsoló egymástól független és együtt is működik. Az **Alapmagasság körül ±5** gomb a felül beállított fix magasság köré állítja a két határt, a megengedett tartományon belül. Kikapcsolva újra az eredeti fix magasságot használja. A véletlen magasság az adogatási parancs része, szerkesztéskor nem mozgatja a fejet. A tényleges labdapályát az asztalon kell kipróbálni, kezdetben szűk magasságtartományban.
+## Megnyitás és használat
 
-A soronkénti labdaszám megmarad, de minden ismétlés saját sorsolást kap. Legfeljebb öt külön labdát küldünk egy véges parancsban. A következő csomag csak befejezési visszajelzés után indul; ötlabdánként rövid átmenet lehet. A beállított pihenő csak a teljes kör után következik. Minden kör új sorsolás; az egylabdás próba is használja a kapcsolókat, de összesen egy labdát küld.
+Androidon Chrome és HTTPS cím szükséges a Bluetoothhoz. A gyári alkalmazást és más robotvezérlő lapokat zárd be, majd Kapcsolódás. Elsőként az 1 labda próba gombbal tesztelj. Az ívmagasság a teljes kombinációra közös, az oldalpörgetéshez a fej kézi elfordítása szükséges. Az oldalirány előjelét az első próbakor ellenőrizd.
 
-A kapcsolók és határok mentéskor, másolatnál és export/import során megmaradnak. A régi (1. verziós) mentések kikapcsolt véletlen móddal tölthetők be. A korábbi 2. verziós mentések beállításai megmaradnak, a fel-le sorsolás kikapcsolva indul. A 3. verziós mentéseket a 0.3 vagy újabb alkalmazással kell megnyitni.
+Ha a kapcsolat megszakad, a STOP nem továbbítható. Ha a robot tovább adogat, a saját kapcsolójával állítsd le. A lap háttérbe kerülésekor a szoftver leállítási parancsot próbál küldeni; automatikusan nem indul újra.
 
-## GitHub Pages
+A projekt fájljait egy GitHub Pages tárhely gyökerébe vagy almappájába töltsd. Újratöltés után ellenőrizd a 0.5 verziófeliratot. Az élő GitHub Pages cím: https://vbenedek121.github.io/Nova-S-Pro/ . Az edzésminták a távirányító Edzésterv kiválasztása listájában és az Edzéstár és szerkesztés nézetben is elérhetők.
 
-A `vbenedek121/Nova-S-Pro` repository gyökerében található az alkalmazás. Settings → Pages → Deploy from a branch → main → / (root) → Save. Várható cím: `https://vbenedek121.github.io/Nova-S-Pro/` (csak sikeres publikálás után létezik).
+Helyi ellenőrzés: `python3 -m http.server 8080`, majd ugyanazon a gépen `http://127.0.0.1:8080`. Közvetlen `file://` megnyitás nem támogatott. Telefonról egy PC sima HTTP LAN-címe Bluetoothhoz nem megfelelő.
 
-Alternatívaként egy már publikált GitHub Pages repository külön almappájából is működik. Minden hivatkozás relatív. A projekt saját címe alatt használj mindig azonos böngészőt a helyi mentésekhez.
+## Fejlesztői ellenőrzés
 
-Helyi ellenőrzés: `python3 -m http.server 8080`, majd `http://localhost:8080`. Közvetlen `file://` megnyitás nem támogatott. Telefonról egy PC sima HTTP LAN-címe Bluetoothhoz nem megfelelő.
+`npm test`: paraméterek, korábbi mentések, pörgetésirány, semleges labda, kalibrálás, minden edzésminta és parancscsomag ellenőrzése.
 
-## Fejlesztés és eredet
+`node tests/ui-check.cjs`: Playwright és Chromium szükséges; a helyi webszerver fusson a 8080-as porton. Más cím `PONG_URL`, más Chromium bináris `PONG_CHROMIUM_PATH` változóval adható meg. A teszt szimulált Bluetooth eszközt használ.
 
-Függőségmentes HTML/CSS/JavaScript. `npm test` ellenőrzi a mentéseket, a csomagformátumot, az MD5 párosítási kivonatot és a sorban álló parancsok leállítását.
+## Webes 0.5 frissítés
 
-A Bluetooth üzenetek és motorparaméterek megértéséhez az [olanga/nova](https://github.com/olanga/nova) és az abban hivatkozott smee/plunder munkája szolgált referenciaként. Az alkalmazás kezelőfelülete, adatmodellje, tárolása és kommunikációs megvalósítása önálló kód; nem tartalmazza a referenciaprojekt alkalmazásfájljait vagy előre programozott gyakorlatait. Az MD5 az RFC 1321 szerint készült, a robot kézfogásához szükséges.
-
-### Ellenőrzés határa
-
-Az automatizált tesztek böngészős működést és szimulált Bluetooth-válaszokat vizsgálnak. Nem igazolják a tényleges labdapályát, az új firmware kompatibilitását vagy a fizikai leállást. Az első hardveres teszt Beni robotján szükséges.
+A korábbi, élő 0.4-es változat távirányítója, véletlen labdatípusa, oldaliránya és fel-le kapcsolója megmaradt. A mentési formátum 4-es; a korábbi 1–3 formátumok beolvasása támogatott. Az új edzéstár és az üreslabda-kalibráció ezekkel együtt működik. Az összes JavaScript modul azonos 0.5 gyorsítótár-verziót kapott.

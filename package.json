@@ -1,1 +1,9 @@
-{"name":"pongbot-hu","private":true,"type":"module","scripts":{"test":"node --test tests/*.test.js"}}
+{
+  "name": "pongbot-hu",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "version": "0.5.0"
+}

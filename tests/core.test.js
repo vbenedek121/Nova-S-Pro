@@ -106,3 +106,4 @@ test('height settings migrate, persist and reject invalid bounds',()=>{
   migrated.random.heightMin=50;migrated.random.heightMax=50;
   assert.equal(roundBatches(migrated,()=>.9)[0].balls[0].height,50);
 });
+

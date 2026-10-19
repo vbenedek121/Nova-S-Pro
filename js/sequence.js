@@ -8,6 +8,7 @@ export function roundBatches(drill, rng=Math.random) {
     for (let i=0;i<template.reps;i++) {
       const ball={...template,reps:1};
       if (options.type) {
+        delete ball.motor;
         ball.type=['back','none','top'][Math.floor(rng()*3)];
         ball.spin=ball.type==='none'?0:options.spin;
       }
@@ -22,3 +23,4 @@ export function roundBatches(drill, rng=Math.random) {
   for (let i=0;i<balls.length;i+=5) batches.push({...drill,balls:balls.slice(i,i+5)});
   return batches;
 }
+
